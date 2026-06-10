@@ -1,0 +1,16 @@
+part_id,part_name,equipment_id,quantity_in_stock,lead_time_days,unit_cost_inr,supplier
+SP-001,Tuyere Assembly,BF-001,8,14,45000,TataSteel Spares
+SP-002,Cooling Stave Panel,BF-001,4,30,120000,Paul Wurth
+SP-003,SKF 23060 Bearing,RM-001,6,7,8500,SKF India
+SP-004,Hydraulic Pump (Rexroth A10V),RM-001,2,21,65000,Bosch Rexroth
+SP-005,Oxygen Lance Tip (5-nozzle),BOF-001,12,5,15000,Danieli
+SP-006,MgO-C Brick (BOF lining),BOF-001,500,10,850,RHI Magnesita
+SP-007,Copper Mold Plate,CC-001,4,28,180000,SMS Concast
+SP-008,SEN (Submerged Entry Nozzle),CC-001,20,3,2500,Vesuvius
+SP-009,Graphite Electrode (500mm),LF-001,6,10,35000,Graphite India
+SP-010,Porous Plug,LF-001,10,5,4500,TYK Corporation
+SP-011,Coupling Gear Sleeve,RM-002,4,14,22000,Renk Group
+SP-012,HSS Work Roll,RM-001,2,45,350000,Akers Sweden
+SP-013,Thermocouple (Type K),BF-001,50,2,450,Tempsens India
+SP-014,Vibration Sensor (ICP),RM-001,10,3,1200,PCB Piezotronics
+SP-015,Oil Filter Element (10μm),RM-001,30,1,350,Pall Corporation
