@@ -3,6 +3,7 @@ Main LangGraph Workflow — orchestrates the multi-agent maintenance wizard.
 
 Flow: User Query → Router → Specialist Agent → Critic → (Revise | Approve) → Response
 """
+import os
 from pathlib import Path
 from langgraph.graph import StateGraph, END
 
@@ -20,6 +21,28 @@ from rag.retriever import retrieve, format_context, get_source_citations
 from utils.logger import get_logger
 
 log = get_logger("agents.graph")
+
+
+def _shorten_source(source: str) -> str:
+    """Shorten a source citation from a full file path to
+    'type: filename.ext (Equipment: X)' for cleaner display in chat."""
+    if ":" not in source:
+        return source
+
+    prefix, rest = source.split(":", 1)
+    rest = rest.strip()
+
+    # Split off any trailing "(Equipment: ...)" suffix
+    suffix = ""
+    if "(" in rest:
+        path_part, _, suffix_part = rest.partition("(")
+        path_part = path_part.strip()
+        suffix = " (" + suffix_part
+    else:
+        path_part = rest
+
+    filename = os.path.basename(path_part.replace("\\", "/"))
+    return f"{prefix.strip()}: {filename}{suffix}"
 
 
 # ─── General Q&A Node ─────────────────────────────────────────
@@ -58,11 +81,11 @@ def format_response_node(state: MaintenanceState) -> dict:
     sources = state.get("retrieved_sources", [])
     alerts = state.get("alerts", [])
 
-    # Append source citations if available
+    # Append source citations if available (shortened to filename only)
     if sources:
         response += "\n\n---\n**Sources:**\n"
         for s in sources[:5]:
-            response += f"- {s}\n"
+            response += f"- {_shorten_source(s)}\n"
 
     # Append alerts if any
     if alerts:
@@ -160,8 +183,15 @@ def get_graph():
     return _compiled_graph
 
 
-def run_query(query: str, conversation_history: list = None) -> dict:
-    """Run a user query through the full agent pipeline."""
+def run_query(query: str, conversation_history: list = None, fast_mode: bool = False) -> dict:
+    """Run a user query through the full agent pipeline.
+
+    If fast_mode is True, the critic's revision loop is skipped — the critic
+    still runs once (for logging/visibility) but is forced to auto-approve
+    instead of looping back to the specialist agent for revisions. This
+    avoids up to MAX_REVISION_LOOPS extra (specialist + critic) round trips
+    per query, significantly reducing response latency.
+    """
     graph = get_graph()
     initial_state = {
         "user_query": query,
@@ -177,7 +207,10 @@ def run_query(query: str, conversation_history: list = None) -> dict:
         "risk_assessment": None,
         "is_validated": False,
         "critic_feedback": None,
-        "revision_count": 0,
+        # In fast mode, start at the max so critic_node's
+        # "revision_count >= MAX_REVISION_LOOPS" check auto-approves
+        # on the first pass instead of looping.
+        "revision_count": 999 if fast_mode else 0,
         "final_response": "",
         "alerts": [],
     }

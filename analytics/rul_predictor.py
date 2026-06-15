@@ -10,7 +10,7 @@ from sklearn.preprocessing import StandardScaler
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from config import SENSOR_DIR, EQUIPMENT, SENSOR_PARAMS
+from config import SENSOR_DIR, SENSOR_PARAMS, get_equipment
 from utils.logger import get_logger
 
 log = get_logger("analytics.rul")
@@ -47,7 +47,7 @@ class RULPredictor:
             return
 
         data = pd.read_csv(csv_path)
-        etype = EQUIPMENT.get(equipment_id, {}).get("type", "")
+        etype = get_equipment().get(equipment_id, {}).get("type", "")
         feature_cols = [c for c in SENSOR_PARAMS.get(etype, []) if c in data.columns]
         if not feature_cols:
             return
@@ -77,7 +77,7 @@ class RULPredictor:
         log.info(f"Trained RUL predictor for {equipment_id}")
 
     def train_all(self) -> None:
-        for eid in EQUIPMENT:
+        for eid in get_equipment():
             self.train(eid)
         log.info(f"Trained {len(self.models)} RUL models")
 
@@ -90,7 +90,7 @@ class RULPredictor:
 
         csv_path = SENSOR_DIR / f"{equipment_id}_sensors.csv"
         data = pd.read_csv(csv_path)
-        etype = EQUIPMENT.get(equipment_id, {}).get("type", "")
+        etype = get_equipment().get(equipment_id, {}).get("type", "")
         feature_cols = [c for c in SENSOR_PARAMS.get(etype, []) if c in data.columns]
 
         feats = self._extract_features(data, feature_cols)
@@ -102,12 +102,18 @@ class RULPredictor:
 
         return {
             "equipment_id": equipment_id,
-            "equipment_name": EQUIPMENT[equipment_id]["name"],
+            "equipment_name": get_equipment()[equipment_id]["name"],
             "rul_hours": round(rul, 1),
             "rul_days": round(rul / 24, 1),
             "confidence": round(confidence, 2),
             "status": "critical" if rul < 100 else "warning" if rul < 300 else "healthy",
         }
+
+    def train_if_missing(self, equipment_id: str) -> None:
+        """Train a model for this equipment only if one doesn't already exist
+        (used when a new machine is added dynamically at runtime)."""
+        if equipment_id not in self.models:
+            self.train(equipment_id)
 
 
 _predictor = None
@@ -118,3 +124,10 @@ def get_predictor() -> RULPredictor:
         _predictor = RULPredictor()
         _predictor.train_all()
     return _predictor
+
+
+def refresh_predictor_for(equipment_id: str) -> None:
+    """Call this after dynamically adding a new machine so its RUL
+    model is trained without restarting the app."""
+    predictor = get_predictor()
+    predictor.train_if_missing(equipment_id)

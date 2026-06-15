@@ -11,7 +11,7 @@ from sklearn.preprocessing import StandardScaler
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from config import ANOMALY_CONTAMINATION, SENSOR_DIR, MODELS_DIR, EQUIPMENT, SENSOR_PARAMS
+from config import ANOMALY_CONTAMINATION, SENSOR_DIR, MODELS_DIR, SENSOR_PARAMS, get_equipment
 from utils.logger import get_logger
 
 log = get_logger("analytics.anomaly")
@@ -34,7 +34,7 @@ class AnomalyDetector:
                 return
             data = pd.read_csv(csv_path)
 
-        etype = EQUIPMENT.get(equipment_id, {}).get("type", "")
+        etype = get_equipment().get(equipment_id, {}).get("type", "")
         feature_cols = [c for c in SENSOR_PARAMS.get(etype, []) if c in data.columns]
         if not feature_cols:
             return
@@ -57,7 +57,7 @@ class AnomalyDetector:
 
     def train_all(self) -> None:
         """Train anomaly detectors for all equipment."""
-        for eid in EQUIPMENT:
+        for eid in get_equipment():
             self.train(eid)
         log.info(f"Trained {len(self.models)} anomaly detection models")
 
@@ -68,7 +68,7 @@ class AnomalyDetector:
         if equipment_id not in self.models:
             return data.assign(anomaly_score=0, is_anomaly=False)
 
-        etype = EQUIPMENT.get(equipment_id, {}).get("type", "")
+        etype = get_equipment().get(equipment_id, {}).get("type", "")
         feature_cols = [c for c in SENSOR_PARAMS.get(etype, []) if c in data.columns]
         X = data[feature_cols].fillna(0).values
         X_scaled = self.scalers[equipment_id].transform(X)
@@ -100,6 +100,12 @@ class AnomalyDetector:
             "status": "anomalous" if latest.get("is_anomaly", False) else "normal",
         }
 
+    def train_if_missing(self, equipment_id: str) -> None:
+        """Train a model for this equipment only if one doesn't already exist
+        (used when a new machine is added dynamically at runtime)."""
+        if equipment_id not in self.models:
+            self.train(equipment_id)
+
 
 # Singleton
 _detector = None
@@ -110,3 +116,10 @@ def get_detector() -> AnomalyDetector:
         _detector = AnomalyDetector()
         _detector.train_all()
     return _detector
+
+
+def refresh_detector_for(equipment_id: str) -> None:
+    """Call this after dynamically adding a new machine so its anomaly
+    model is trained without restarting the app."""
+    detector = get_detector()
+    detector.train_if_missing(equipment_id)

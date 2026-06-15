@@ -11,7 +11,7 @@ from agents.llm_helper import call_llm
 from analytics.anomaly_detector import get_detector
 from analytics.rul_predictor import get_predictor
 from analytics.risk_classifier import classify_risk, get_all_risk_levels
-from config import EQUIPMENT
+from config import get_equipment
 from utils.logger import get_logger
 
 log = get_logger("agents.predictive")
@@ -42,7 +42,9 @@ def predictive_node(state: MaintenanceState) -> dict:
     predictor = get_predictor()
     alerts = []
 
-    if equipment_id and equipment_id in EQUIPMENT:
+    equipment_registry = get_equipment()
+
+    if equipment_id and equipment_id in equipment_registry:
         # Single equipment analysis
         anomaly_status = detector.get_current_status(equipment_id)
         rul_result = predictor.predict(equipment_id)
@@ -53,7 +55,7 @@ def predictive_node(state: MaintenanceState) -> dict:
             rul_hours=rul_result.get("rul_hours", 1000),
         )
 
-        analytics_summary = f"""### Analytics Results for {EQUIPMENT[equipment_id]['name']} ({equipment_id})
+        analytics_summary = f"""### Analytics Results for {equipment_registry[equipment_id]['name']} ({equipment_id})
 
 **Anomaly Detection:**
 - Current Status: {anomaly_status['status'].upper()}
@@ -76,7 +78,7 @@ def predictive_node(state: MaintenanceState) -> dict:
             alerts.append({
                 "equipment_id": equipment_id,
                 "severity": risk["risk_level"],
-                "message": f"{EQUIPMENT[equipment_id]['name']}: {risk['urgency']}",
+                "message": f"{equipment_registry[equipment_id]['name']}: {risk['urgency']}",
             })
     else:
         # All equipment overview

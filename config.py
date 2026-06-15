@@ -33,16 +33,39 @@ HF_INFERENCE_URL = "https://api-inference.huggingface.co/models/"
 
 # For local hosting (Ollama)
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_PRIMARY_MODEL = os.getenv("OLLAMA_PRIMARY_MODEL", "qwen2.5:7b")
-OLLAMA_ROUTER_MODEL = os.getenv("OLLAMA_ROUTER_MODEL", "llama3.2:3b")
+OLLAMA_PRIMARY_MODEL = os.getenv("OLLAMA_PRIMARY_MODEL", "llama3:latest")
+OLLAMA_ROUTER_MODEL = os.getenv("OLLAMA_ROUTER_MODEL", "llama3.2:latest")
 
-# Choose inference mode: "huggingface", "ollama", or "groq"
-INFERENCE_MODE = os.getenv("INFERENCE_MODE", "huggingface")
+# ──────────────────────────────────────────────
+# Choose inference mode: "huggingface", "ollama", "groq", or "gemini"
+# Defaults to "groq" — set GROQ_API_KEY below (or in .env) to use it
+# out-of-the-box without touching the sidebar.
+# ──────────────────────────────────────────────
+INFERENCE_MODE = os.getenv("INFERENCE_MODE", "groq")
 
+# ──────────────────────────────────────────────
 # Groq (free tier for open-source models)
+# DEFAULT KEY: put your key in a .env file as GROQ_API_KEY=... (recommended,
+# and make sure .env is in .gitignore so it never gets committed/shared).
+# Get a free key at https://console.groq.com/keys
+# The sidebar field can still override this per-session.
+# ──────────────────────────────────────────────
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_PRIMARY_MODEL = os.getenv("GROQ_PRIMARY_MODEL", "llama-3.3-70b-versatile")
 GROQ_ROUTER_MODEL = os.getenv("GROQ_ROUTER_MODEL", "llama-3.1-8b-instant")
+
+# ──────────────────────────────────────────────
+# Google Gemini (fallback option)
+# DEFAULT KEY: Set GEMINI_API_KEY in your .env file (recommended), or replace
+# "PASTE_YOUR_GEMINI_API_KEY_HERE" below directly. Either way, the app's
+# sidebar field can still override this at runtime per-session.
+# Get a free key at https://aistudio.google.com/apikey
+# Using 1.5-flash models — generally more available free-tier quota
+# than 2.0-flash on newly created API keys.
+# ──────────────────────────────────────────────
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "PASTE_YOUR_GEMINI_API_KEY_HERE")
+GEMINI_PRIMARY_MODEL = os.getenv("GEMINI_PRIMARY_MODEL", "gemini-1.5-flash")
+GEMINI_ROUTER_MODEL = os.getenv("GEMINI_ROUTER_MODEL", "gemini-1.5-flash-8b")
 
 # ──────────────────────────────────────────────
 # Embedding Configuration
@@ -85,9 +108,11 @@ AGENT_TEMPERATURE = 0.1
 AGENT_MAX_TOKENS = 2048
 
 # ──────────────────────────────────────────────
-# Equipment Registry
+# Equipment Registry (dynamic — backed by JSON)
 # ──────────────────────────────────────────────
-EQUIPMENT = {
+EQUIPMENT_REGISTRY_FILE = DATA_DIR / "equipment_registry.json"
+
+_DEFAULT_EQUIPMENT = {
     "BF-001": {"name": "Blast Furnace #1", "type": "Blast Furnace", "criticality": "critical"},
     "BF-002": {"name": "Blast Furnace #2", "type": "Blast Furnace", "criticality": "critical"},
     "BOF-001": {"name": "Basic Oxygen Furnace #1", "type": "BOF", "criticality": "critical"},
@@ -101,6 +126,34 @@ EQUIPMENT = {
     "LF-002": {"name": "Ladle Furnace #2", "type": "Ladle Furnace", "criticality": "medium"},
 }
 
+
+def _load_equipment_registry() -> dict:
+    """Load equipment registry from JSON, seeding it with defaults on first run."""
+    import json
+    if EQUIPMENT_REGISTRY_FILE.exists():
+        try:
+            with open(EQUIPMENT_REGISTRY_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    # First run — seed the file with defaults
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with open(EQUIPMENT_REGISTRY_FILE, "w", encoding="utf-8") as f:
+        json.dump(_DEFAULT_EQUIPMENT, f, indent=2)
+    return dict(_DEFAULT_EQUIPMENT)
+
+
+EQUIPMENT = _load_equipment_registry()  # snapshot at import time (back-compat)
+
+
+def get_equipment() -> dict:
+    """Always returns the current equipment registry from disk (no restart needed)."""
+    return _load_equipment_registry()
+
+
+# ──────────────────────────────────────────────
+# Sensor Configuration
+# ──────────────────────────────────────────────
 # Sensor parameters per equipment type
 SENSOR_PARAMS = {
     "Blast Furnace": ["temperature", "pressure", "gas_flow", "burden_level", "cooling_water_temp", "vibration"],

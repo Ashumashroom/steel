@@ -6,7 +6,7 @@ import pandas as pd
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from config import EQUIPMENT, LOGS_DIR
+from config import LOGS_DIR, get_equipment
 from utils.logger import get_logger
 
 log = get_logger("analytics.risk")
@@ -21,7 +21,7 @@ def classify_risk(
     rul_hours: float = 1000.0,
 ) -> dict:
     """Classify risk level for equipment based on multiple factors."""
-    info = EQUIPMENT.get(equipment_id, {})
+    info = get_equipment().get(equipment_id, {})
     criticality = info.get("criticality", "medium")
     crit_w = CRITICALITY_WEIGHT.get(criticality, 0.5)
 
@@ -89,7 +89,7 @@ def get_all_risk_levels() -> list[dict]:
     predictor = get_predictor()
 
     results = []
-    for eid in EQUIPMENT:
+    for eid in get_equipment():
         status = detector.get_current_status(eid)
         rul = predictor.predict(eid)
         risk = classify_risk(

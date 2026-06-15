@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from config import EQUIPMENT, LOGS_DIR
+from config import LOGS_DIR, get_equipment
 
 
 def render_report_generator():
@@ -41,7 +41,7 @@ def _render_health_summary():
         report_lines = [
             f"# Equipment Health Summary Report",
             f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-            f"**Total Equipment:** {len(EQUIPMENT)}",
+            f"**Total Equipment:** {len(get_equipment())}",
             "",
         ]
 

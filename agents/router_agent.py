@@ -8,7 +8,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from agents.state import MaintenanceState
 from agents.llm_helper import call_llm
-from config import EQUIPMENT
+from config import get_equipment
 from utils.logger import get_logger
 
 log = get_logger("agents.router")
@@ -27,29 +27,35 @@ Respond in JSON format ONLY:
 {"intent": "...", "equipment_id": "..." or null}
 """
 
-EQUIPMENT_ALIASES = {}
-for eid, info in EQUIPMENT.items():
-    name_lower = info["name"].lower()
-    EQUIPMENT_ALIASES[eid.lower()] = eid
-    EQUIPMENT_ALIASES[name_lower] = eid
-    # Add partial matches
-    for word in name_lower.split():
-        if len(word) > 3:
-            EQUIPMENT_ALIASES[word] = eid
+
+def _build_equipment_aliases(equipment: dict) -> dict:
+    """Build an alias map fresh from the current equipment registry."""
+    aliases = {}
+    for eid, info in equipment.items():
+        name_lower = info["name"].lower()
+        aliases[eid.lower()] = eid
+        aliases[name_lower] = eid
+        for word in name_lower.split():
+            if len(word) > 3:
+                aliases[word] = eid
+    return aliases
 
 
 def _extract_equipment_id(query: str) -> str | None:
     """Extract equipment ID from query using regex and aliases."""
+    equipment = get_equipment()
+
     # Direct ID pattern (e.g., BF-001, RM-003)
     match = re.search(r'\b([A-Z]{2,3}-\d{3})\b', query.upper())
     if match:
         eid = match.group(1)
-        if eid in EQUIPMENT:
+        if eid in equipment:
             return eid
 
-    # Check aliases
+    # Check aliases (rebuilt from current registry each call)
     query_lower = query.lower()
-    for alias, eid in EQUIPMENT_ALIASES.items():
+    aliases = _build_equipment_aliases(equipment)
+    for alias, eid in aliases.items():
         if alias in query_lower:
             return eid
     return None

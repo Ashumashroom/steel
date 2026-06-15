@@ -1,0 +1,57 @@
+{
+  "BF-001": {
+    "name": "Blast Furnace #1",
+    "type": "Blast Furnace",
+    "criticality": "critical"
+  },
+  "BF-002": {
+    "name": "Blast Furnace #2",
+    "type": "Blast Furnace",
+    "criticality": "critical"
+  },
+  "BOF-001": {
+    "name": "Basic Oxygen Furnace #1",
+    "type": "BOF",
+    "criticality": "critical"
+  },
+  "BOF-002": {
+    "name": "Basic Oxygen Furnace #2",
+    "type": "BOF",
+    "criticality": "high"
+  },
+  "RM-001": {
+    "name": "Hot Rolling Mill #1",
+    "type": "Rolling Mill",
+    "criticality": "high"
+  },
+  "RM-002": {
+    "name": "Cold Rolling Mill #1",
+    "type": "Rolling Mill",
+    "criticality": "high"
+  },
+  "RM-003": {
+    "name": "Rolling Mill Motor #3",
+    "type": "Rolling Mill",
+    "criticality": "medium"
+  },
+  "CC-001": {
+    "name": "Continuous Caster #1",
+    "type": "Caster",
+    "criticality": "critical"
+  },
+  "CC-002": {
+    "name": "Continuous Caster #2",
+    "type": "Caster",
+    "criticality": "high"
+  },
+  "LF-001": {
+    "name": "Ladle Furnace #1",
+    "type": "Ladle Furnace",
+    "criticality": "high"
+  },
+  "LF-002": {
+    "name": "Ladle Furnace #2",
+    "type": "Ladle Furnace",
+    "criticality": "medium"
+  }
+}
